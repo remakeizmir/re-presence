@@ -55,11 +55,15 @@ indirme="https://github.com/$REPO/releases/latest/download/re-presence-$platform
 bilgi "İndiriliyor…"
 if ! curl -fsSL "$indirme" -o "$BIN.indiriliyor"; then
   # Yayınlanmış sürüme ulaşılamadı: Go varsa kaynaktan derle.
-  if command -v go >/dev/null 2>&1 && [ -f "$(dirname "$0")/main.go" ]; then
+  # Piped through bash, $0 is "bash" — the source fallback only applies when
+  # this file was cloned and run from inside the repository.
+  betik_dizini="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd || echo .)"
+  if command -v go >/dev/null 2>&1 && [ -f "$betik_dizini/main.go" ]; then
     bilgi "Hazır sürüm alınamadı, kaynaktan derleniyor…"
-    (cd "$(dirname "$0")" && go build -o "$BIN" .)
+    (cd "$betik_dizini" && go build -o "$BIN" .)
   else
     hata "İndirilemedi: $indirme"
+    hata "İnternet bağlantını kontrol et; sürmezse hub'dan bize yaz."
     exit 1
   fi
 else
