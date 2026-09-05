@@ -40,9 +40,10 @@ import (
 const (
 	reportEvery = 30 * time.Second
 	// idleAfter is how long the editor may be out of focus before the card
-	// comes down. Long enough to read a page of documentation in the browser,
-	// short enough that "working" means it.
-	idleAfter = 5 * time.Minute
+	// comes down. Ten minutes: reading documentation, answering a message, and
+	// looking at your own hub profile are all part of working — and the last
+	// of those is guaranteed to happen the first time anyone installs this.
+	idleAfter = 10 * time.Minute
 )
 
 // editors maps the application name the window manager reports to the name
@@ -129,12 +130,17 @@ func main() {
 	ticker := time.NewTicker(reportEvery)
 	defer ticker.Stop()
 
-	var lastSeen time.Time
-	var lastSentIdle bool
+	var (
+		last         report
+		haveLast     bool
+		lastSeen     time.Time
+		lastSentIdle bool
+	)
 
 	tick := func() {
 		window, ok := focusedEditor()
 		if ok {
+			last, haveLast = window, true
 			lastSeen = time.Now()
 			lastSentIdle = false
 			if err := send(cfg, window); err != nil {
@@ -143,11 +149,23 @@ func main() {
 			return
 		}
 
-		// Not in the editor. Give it a while before taking the card down —
-		// looking something up is part of working.
-		if !lastSentIdle && !lastSeen.IsZero() && time.Since(lastSeen) > idleAfter {
+		// Out of the editor, but not for long: keep saying the same thing.
+		//
+		// The hub forgets a report after two minutes, and the first thing
+		// anyone does after installing this is switch to a browser to look at
+		// their own profile — which is exactly when the card would vanish.
+		// Working is not only the minutes with the editor in front.
+		if haveLast && time.Since(lastSeen) < idleAfter {
+			if err := send(cfg, last); err != nil {
+				log.Printf("[re:presence] gönderilemedi: %v", err)
+			}
+			return
+		}
+
+		if !lastSentIdle && haveLast {
 			lastSentIdle = true
-			if err := send(cfg, report{App: "editör", Idle: true}); err != nil {
+			haveLast = false
+			if err := send(cfg, report{App: last.App, Idle: true}); err != nil {
 				log.Printf("[re:presence] boşta bildirimi gönderilemedi: %v", err)
 			}
 		}

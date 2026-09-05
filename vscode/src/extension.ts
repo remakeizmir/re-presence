@@ -17,9 +17,12 @@ import * as vscode from "vscode";
  *  card up without the card ever flickering. */
 const REPORT_EVERY_MS = 30_000;
 
-/** Out of the window this long and the card comes down. Reading documentation
- *  in a browser is part of working; lunch is not. */
-const IDLE_AFTER_MS = 5 * 60_000;
+/** Out of the window this long and the card comes down. Ten minutes, matching
+ *  the agent: reading documentation, answering a message and looking at your
+ *  own hub profile are all part of working — and the hub forgets a report
+ *  after two, so anything shorter makes the card blink out while you are
+ *  looking straight at it. */
+const IDLE_AFTER_MS = 10 * 60_000;
 
 let timer: NodeJS.Timeout | undefined;
 let lastActive = Date.now();
