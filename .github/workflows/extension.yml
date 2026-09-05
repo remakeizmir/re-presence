@@ -58,6 +58,9 @@ jobs:
           }
           echo "$cikti"
 
+      # Only a tag has a release to attach to; a manual run is for checking
+      # that the publish steps still work.
       - uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
         with:
           files: vscode/re-presence.vsix
