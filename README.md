@@ -75,6 +75,12 @@ irm https://remakeizmir.com/presence.ps1 | iex
 
 İndirir, kodu gösterir, bilgisayar her açıldığında kendi başlar.
 
+**Zed'e özel bir not:** Zed pencerelerini kendi çiziyor ve işletim sistemi
+onların başlığını okuyamıyor. O yüzden Zed için proje ve dosya adı, Zed'in
+kendi yerel veritabanından okunuyor — salt okunur, yalnız "hangi çalışma alanı
+açık" ve "son hangi dosyadaydı" bilgisi. `sqlite3` komutu gerekiyor; macOS'ta
+kurulu geliyor.
+
 Tanıdığı editörler: Zed, Antigravity, VS Code, Cursor, Windsurf, Xcode, Sublime
 Text, Neovide, GoLand, WebStorm, IntelliJ, PyCharm, Android Studio, Rider, CLion,
 RustRover, PhpStorm, Visual Studio, Emacs, Nova. Odakta başka bir şey varken

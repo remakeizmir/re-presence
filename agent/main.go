@@ -162,7 +162,7 @@ func main() {
 		// while the editor was already running. The app alone is worth saying.
 		if !haveLast {
 			for app := range running {
-				last = report{App: app}
+				last = enrich(report{App: app})
 				haveLast = true
 				lastSentIdle = false
 				if err := send(cfg, last); err != nil {
@@ -451,12 +451,33 @@ func focusedEditor() (report, bool) {
 	}
 
 	file, project := splitTitle(title)
-	return report{
+	return enrich(report{
 		App:      name,
 		Project:  project,
 		File:     file,
 		Language: languageOf(file),
-	}, true
+	}), true
+}
+
+// enrich fills in what the window title could not say.
+//
+// Only Zed needs this today: it draws its own windows and the desktop cannot
+// read a title off them, so without this the card says an editor is open and
+// nothing else. Zed's own database knows the answer.
+func enrich(r report) report {
+	if !strings.EqualFold(r.App, "Zed") || (r.Project != "" && r.File != "") {
+		return r
+	}
+
+	project, file := zedState()
+	if r.Project == "" {
+		r.Project = project
+	}
+	if r.File == "" {
+		r.File = file
+		r.Language = languageOf(file)
+	}
+	return r
 }
 
 // splitTitle pulls the file and the project out of a window title.
