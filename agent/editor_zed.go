@@ -25,9 +25,13 @@ import (
 // This needs the sqlite3 command, which macOS ships and most Linux
 // distributions have. Without it the card falls back to the app name alone.
 
-// The active tab of the active pane in the most recently used workspace —
-// which is the file on screen, not merely one visited lately. Zed writes this
-// as tabs are switched, so it keeps up.
+// The active tab of the active pane, for every open workspace — one row per
+// Zed window. Which of those windows is in front is a question macOS will not
+// answer for Zed: it publishes no accessibility windows, so System Events
+// cannot see one, and reading a window's title otherwise needs the screen
+// recording permission, which is far too much to ask for a status line.
+//
+// So the rows come back for all of them and the choice is made below.
 const zedQuery = `
 SELECT w.paths, e.path
 FROM items i
@@ -36,7 +40,7 @@ JOIN editors e ON e.item_id = i.item_id AND e.workspace_id = i.workspace_id
 JOIN workspaces w ON w.workspace_id = i.workspace_id
 WHERE i.active = 1 AND p.active = 1
 ORDER BY w.timestamp DESC
-LIMIT 1;`
+LIMIT 8;`
 
 // If the tables above tell us nothing — an empty pane, a workspace that has
 // only just opened — the navigation history still knows where someone was.
@@ -55,10 +59,93 @@ func zedState() (project, file string) {
 		return "", ""
 	}
 
-	if project, file = zedQueryRow(db, zedQuery); project != "" {
+	if project, file = pickOpenWorkspace(zedRows(db, zedQuery)); project != "" {
 		return project, file
 	}
 	return zedQueryRow(db, zedFallbackQuery)
+}
+
+// pickOpenWorkspace chooses between several open Zed windows.
+//
+// Zed writes every window's state in one go, so their timestamps are
+// identical and say nothing about which one someone is sitting in — and macOS
+// will not say either: Zed publishes no accessibility windows, and reading a
+// window title otherwise needs the screen recording permission, which is far
+// too much to ask for a status line.
+//
+// What does say something is movement. The agent runs continuously, so it can
+// remember what each window had open a moment ago; the window whose tab
+// changed is the window someone is in. Between changes the last answer sticks,
+// which is right — you are still in that project while you read.
+//
+// The first sample has nothing to compare against and takes the database's own
+// order. It corrects itself the moment a tab is switched.
+func pickOpenWorkspace(rows [][2]string) (project, file string) {
+	current := make(map[string]string, len(rows))
+	for _, row := range rows {
+		if row[0] != "" {
+			current[row[0]] = row[1]
+		}
+	}
+	if len(current) == 0 {
+		return "", ""
+	}
+
+	chosen := ""
+	for workspace, openFile := range current {
+		if previous, seen := zedSeen[workspace]; seen && previous != openFile {
+			chosen = workspace
+			break
+		}
+	}
+
+	// Nothing moved: stay where we were, as long as that window is still open.
+	if chosen == "" {
+		if _, stillOpen := current[zedChoice]; stillOpen {
+			chosen = zedChoice
+		}
+	}
+
+	// First run, or the window we were watching has closed.
+	if chosen == "" {
+		for _, row := range rows {
+			if row[0] != "" {
+				chosen = row[0]
+				break
+			}
+		}
+	}
+
+	zedSeen = current
+	zedChoice = chosen
+	return baseOrEmpty(chosen), baseOrEmpty(current[chosen])
+}
+
+// What each Zed window had open at the previous sample, and which one was
+// chosen from it.
+var (
+	zedSeen   = map[string]string{}
+	zedChoice string
+)
+
+// zedRows runs a query that returns "workspace path | file path" lines.
+func zedRows(db, query string) [][2]string {
+	out, err := exec.Command("sqlite3", "-readonly", db, query).Output()
+	if err != nil {
+		return nil
+	}
+
+	var rows [][2]string
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		if line == "" {
+			continue
+		}
+		parts := strings.SplitN(line, "|", 2)
+		if len(parts) == 2 {
+			rows = append(rows, [2]string{parts[0], parts[1]})
+		}
+	}
+	return rows
 }
 
 func zedQueryRow(db, query string) (project, file string) {
