@@ -2,7 +2,7 @@
   "name": "re-presence",
   "displayName": "re:make presence",
   "description": "Şu an ne üzerinde çalıştığını re:make hub profilinde göster.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "remake",
   "engines": {
     "vscode": "^1.85.0"
