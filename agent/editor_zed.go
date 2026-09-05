@@ -25,7 +25,22 @@ import (
 // This needs the sqlite3 command, which macOS ships and most Linux
 // distributions have. Without it the card falls back to the app name alone.
 
+// The active tab of the active pane in the most recently used workspace —
+// which is the file on screen, not merely one visited lately. Zed writes this
+// as tabs are switched, so it keeps up.
 const zedQuery = `
+SELECT w.paths, e.path
+FROM items i
+JOIN panes p ON p.pane_id = i.pane_id AND p.workspace_id = i.workspace_id
+JOIN editors e ON e.item_id = i.item_id AND e.workspace_id = i.workspace_id
+JOIN workspaces w ON w.workspace_id = i.workspace_id
+WHERE i.active = 1 AND p.active = 1
+ORDER BY w.timestamp DESC
+LIMIT 1;`
+
+// If the tables above tell us nothing — an empty pane, a workspace that has
+// only just opened — the navigation history still knows where someone was.
+const zedFallbackQuery = `
 SELECT w.paths, h.path
 FROM recent_navigation_history h
 JOIN workspaces w ON w.workspace_id = h.workspace_id
@@ -40,9 +55,16 @@ func zedState() (project, file string) {
 		return "", ""
 	}
 
+	if project, file = zedQueryRow(db, zedQuery); project != "" {
+		return project, file
+	}
+	return zedQueryRow(db, zedFallbackQuery)
+}
+
+func zedQueryRow(db, query string) (project, file string) {
 	// Read-only, so nothing can be written to someone's editor state by a
 	// status reporter — and so a running Zed is never blocked by this.
-	out, err := exec.Command("sqlite3", "-readonly", db, zedQuery).Output()
+	out, err := exec.Command("sqlite3", "-readonly", db, query).Output()
 	if err != nil {
 		return "", ""
 	}

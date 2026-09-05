@@ -152,6 +152,7 @@ func main() {
 		// the file it was last on — that is what the card said a moment ago
 		// and nothing has happened to make it untrue.
 		if haveLast && running[last.App] {
+			last = refresh(last)
 			if err := send(cfg, last); err != nil {
 				log.Printf("[re:presence] gönderilemedi: %v", err)
 			}
@@ -476,6 +477,27 @@ func enrich(r report) report {
 	if r.File == "" {
 		r.File = file
 		r.Language = languageOf(file)
+	}
+	return r
+}
+
+// refresh re-reads what can be read without the window being in front.
+//
+// Repeating the last report keeps the card up while someone is in a browser,
+// but repeating it unchanged froze the file they were on at the moment they
+// left the editor. Zed's database is just as readable from the background, so
+// switching tabs and then checking your own profile now shows the tab you
+// actually have open.
+func refresh(r report) report {
+	if !strings.EqualFold(r.App, "Zed") {
+		return r
+	}
+	if project, file := zedState(); project != "" {
+		r.Project = project
+		if file != "" {
+			r.File = file
+			r.Language = languageOf(file)
+		}
 	}
 	return r
 }
