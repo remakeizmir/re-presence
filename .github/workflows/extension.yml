@@ -19,6 +19,12 @@ jobs:
     defaults:
       run:
         working-directory: vscode
+    # Read once at job level: the secrets context is not available inside a
+    # step's `if`, which is what made every run of this die at zero seconds
+    # with "workflow file issue" and no log to read.
+    env:
+      VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      OVSX_PAT: ${{ secrets.OVSX_PAT }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -30,16 +36,12 @@ jobs:
       - run: npx @vscode/vsce package --no-dependencies --allow-missing-repository -o re-presence.vsix
 
       - name: VS Code Marketplace
-        if: ${{ secrets.VSCE_PAT != '' }}
+        if: env.VSCE_PAT != ''
         run: npx @vscode/vsce publish --packagePath re-presence.vsix
-        env:
-          VSCE_PAT: ${{ secrets.VSCE_PAT }}
 
       - name: Open VSX
-        if: ${{ secrets.OVSX_PAT != '' }}
+        if: env.OVSX_PAT != ''
         run: npx ovsx publish re-presence.vsix -p "$OVSX_PAT"
-        env:
-          OVSX_PAT: ${{ secrets.OVSX_PAT }}
 
       - uses: softprops/action-gh-release@v2
         with:
