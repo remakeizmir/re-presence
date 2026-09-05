@@ -1,0 +1,95 @@
+{
+  "name": "re-presence",
+  "displayName": "re:make presence",
+  "description": "Şu an ne üzerinde çalıştığını re:make hub profilinde göster.",
+  "version": "0.1.1",
+  "publisher": "remake",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "re:make presence",
+      "properties": {
+        "remake.token": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Cihaz anahtarı. hub → Ayarlar → Bağlantılar → **Kod editörü**'nden oluşturulur.",
+          "scope": "application"
+        },
+        "remake.apiUrl": {
+          "type": "string",
+          "default": "https://api.remakeizmir.com/api/v1",
+          "description": "API adresi. Yerel geliştirme için http://localhost:4000/api/v1.",
+          "scope": "application"
+        },
+        "remake.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Kapatınca hiçbir şey gönderilmez."
+        },
+        "remake.privateProjects": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "Bu klasör adlarında dosya adı gönderilmez, yalnızca 'gizli bir projede' yazar."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "remake.connect",
+        "title": "re:make: Bağlan"
+      },
+      {
+        "command": "remake.setToken",
+        "title": "re:make: Cihaz anahtarını elle gir"
+      },
+      {
+        "command": "remake.toggle",
+        "title": "re:make: Aktiviteyi aç/kapat"
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "npx @vscode/vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.4.0"
+  },
+  "icon": "icon.png",
+  "license": "MIT",
+  "homepage": "https://remakeizmir.com",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/remakeizmir/re-presence"
+  },
+  "bugs": {
+    "url": "https://remakeizmir.com"
+  },
+  "keywords": [
+    "presence",
+    "activity",
+    "status",
+    "remake",
+    "topluluk"
+  ],
+  "galleryBanner": {
+    "color": "#101010",
+    "theme": "dark"
+  },
+  "qna": false
+}

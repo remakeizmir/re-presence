@@ -1,0 +1,46 @@
+# Packages the editor extension and, when the tokens are there, publishes it to
+# both marketplaces: Microsoft's for VS Code, Open VSX for Cursor, Windsurf,
+# Antigravity and VSCodium, which cannot use Microsoft's.
+#
+# The .vsix is attached to the release either way, so there is always a
+# download that works without any account at all.
+name: extension
+
+on:
+  push:
+    tags: ["ext-v*"]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: vscode
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - run: npm install
+      - run: npm run compile
+      - run: npx @vscode/vsce package --no-dependencies --allow-missing-repository -o re-presence.vsix
+
+      - name: VS Code Marketplace
+        if: ${{ secrets.VSCE_PAT != '' }}
+        run: npx @vscode/vsce publish --packagePath re-presence.vsix
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+
+      - name: Open VSX
+        if: ${{ secrets.OVSX_PAT != '' }}
+        run: npx ovsx publish re-presence.vsix -p "$OVSX_PAT"
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: vscode/re-presence.vsix

@@ -1,0 +1,10 @@
+# Built by `npm run package`; published to the marketplaces and copied into
+# landing/public by sync-landing.sh, never committed.
+vscode/*.vsix
+vscode/node_modules/
+vscode/out/
+
+# The agent's binary.
+agent/re-presence
+dist/
+.DS_Store
