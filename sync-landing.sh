@@ -8,6 +8,9 @@ hedef="$(dirname "$0")/../landing/public/presence.sh"
 cp "$kaynak" "$hedef"
 echo "kopyalandı → $hedef"
 
+cp "$(dirname "$0")/agent/install.ps1" "$(dirname "$0")/../landing/public/presence.ps1"
+echo "kopyalandı → landing/public/presence.ps1"
+
 # The extension is downloaded the same way, for anyone whose editor is not in a
 # marketplace we publish to — or before we publish at all.
 vsix="$(ls "$(dirname "$0")"/vscode/*.vsix 2>/dev/null | head -1)"

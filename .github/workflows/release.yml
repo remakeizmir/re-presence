@@ -21,11 +21,12 @@ jobs:
       - name: Derle
         working-directory: agent
         run: |
-          for hedef in darwin/arm64 darwin/amd64 linux/amd64 linux/arm64; do
+          for hedef in darwin/arm64 darwin/amd64 linux/amd64 linux/arm64 windows/amd64 windows/arm64; do
             os="${hedef%/*}"; arch="${hedef#*/}"
+            son=""; [ "$os" = "windows" ] && son=".exe"
             GOOS="$os" GOARCH="$arch" CGO_ENABLED=0 \
               go build -trimpath -ldflags "-s -w" \
-              -o "../dist/re-presence-$os-$arch" .
+              -o "../dist/re-presence-$os-$arch$son" .
           done
 
       - uses: softprops/action-gh-release@v2

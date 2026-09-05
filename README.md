@@ -8,7 +8,11 @@ There are two ways in, because editors differ in what they will let a plugin do:
 | | What it is | Works with |
 |---|---|---|
 | **`vscode/`** | A VS Code extension | VS Code, Cursor, Windsurf, Antigravity — anything built on VS Code |
-| **`agent/`** | A small background program that reads the focused window's title | **Zed**, Xcode, Sublime, JetBrains, terminal editors — anything else |
+| **`agent/`** | A small background program that reads the focused window's title | **Zed**, Xcode, Sublime, JetBrains, Visual Studio — anything else |
+
+Systems the agent runs on: **macOS**, **Windows**, and **Linux under X11**.
+Wayland is the exception — no compositor there hands the focused window's
+title to an unprivileged process, which is the whole mechanism.
 
 The agent exists because most editors have no way for a plugin to run in the
 background and speak HTTP. Zed's extensions are WebAssembly with no network or
@@ -44,10 +48,16 @@ Nereden kurulur:
 > yolluyor, ayrıca .vsix'i release'e ekliyor. Secret yoksa yalnız .vsix üretilir
 > — indirme bağlantısı yine çalışır.
 
-**Zed, Xcode, JetBrains, diğerleri:** terminale tek satır —
+**Zed, Xcode, JetBrains, diğerleri:** tek satır —
 
 ```sh
+# macOS ve Linux
 curl -fsSL https://remakeizmir.com/presence.sh | bash
+```
+
+```powershell
+# Windows (PowerShell, yönetici gerekmez)
+irm https://remakeizmir.com/presence.ps1 | iex
 ```
 
 İndirir, altı haneli kodu gösterir, açılışta çalışacak şekilde kurar. Kaldırmak

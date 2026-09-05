@@ -42,3 +42,42 @@ func TestLanguageOf(t *testing.T) {
 		t.Errorf("bilinmeyen: %q", got)
 	}
 }
+
+// Windows names a running program by its executable, and the executable
+// rarely matches what is written on the window: JetBrains ships idea64.exe,
+// Android Studio ships studio64.exe, and Visual Studio — a different program
+// from VS Code — is devenv.exe.
+func TestEditorFromProcess(t *testing.T) {
+	known := map[string]string{
+		"Zed.exe":            "Zed",
+		"Code.exe":           "VS Code",
+		"cursor.exe":         "Cursor",
+		"idea64.exe":         "IntelliJ",
+		"studio64.exe":       "Android Studio",
+		"devenv.exe":         "Visual Studio",
+		"sublime_text":       "Sublime Text",
+		"Zed":                "Zed", // macOS reports it without the suffix
+		"Visual Studio Code": "",    // the window's name, not the process
+	}
+
+	for input, want := range known {
+		got, ok := editorFromProcess(input)
+		if want == "" {
+			if ok {
+				t.Errorf("%q editör sayıldı (%q)", input, got)
+			}
+			continue
+		}
+		if !ok || got != want {
+			t.Errorf("%q → %q (%v), beklenen %q", input, got, ok, want)
+		}
+	}
+}
+
+func TestEditorFromProcessIgnoresEverythingElse(t *testing.T) {
+	for _, name := range []string{"chrome.exe", "Slack", "explorer.exe", "", "  "} {
+		if _, ok := editorFromProcess(name); ok {
+			t.Errorf("%q editör sayıldı", name)
+		}
+	}
+}

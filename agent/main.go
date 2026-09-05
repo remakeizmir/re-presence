@@ -283,6 +283,10 @@ func openBrowser(address string) {
 		_ = exec.Command("open", address).Start()
 	case "linux":
 		_ = exec.Command("xdg-open", address).Start()
+	case "windows":
+		// Through the shell, because the URL carries a query string that
+		// `start` would otherwise read as its own arguments.
+		_ = exec.Command("rundll32", "url.dll,FileProtocolHandler", address).Start()
 	}
 }
 
@@ -296,6 +300,10 @@ func copyToClipboard(text string) {
 		_ = cmd.Run()
 	case "linux":
 		cmd := exec.Command("xclip", "-selection", "clipboard")
+		cmd.Stdin = strings.NewReader(text)
+		_ = cmd.Run()
+	case "windows":
+		cmd := exec.Command("clip")
 		cmd.Stdin = strings.NewReader(text)
 		_ = cmd.Run()
 	}
@@ -408,7 +416,7 @@ func focusedEditor() (report, bool) {
 		return report{}, false
 	}
 
-	name, known := editors[strings.ToLower(app)]
+	name, known := editorFromProcess(app)
 	if !known {
 		return report{}, false
 	}
@@ -536,58 +544,46 @@ func languageOf(file string) string {
 	}
 }
 
-// focusedWindow asks the desktop what has focus. macOS answers through
-// AppleScript, which needs no special permission for the frontmost
-// application's name and window title; Linux through xprop, when it is there.
-func focusedWindow() (app, title string, err error) {
-	switch runtime.GOOS {
-	case "darwin":
-		return focusedWindowDarwin()
-	case "linux":
-		return focusedWindowLinux()
-	default:
-		return "", "", fmt.Errorf("%s desteklenmiyor", runtime.GOOS)
+// editorFromProcess turns what the operating system calls the running program
+// into what the card should say. Windows reports executables ("Code.exe",
+// "idea64.exe"), macOS and Linux report the application's own name — so both
+// tables are consulted, and anything unknown is not an editor as far as this
+// is concerned.
+func editorFromProcess(name string) (string, bool) {
+	name = strings.ToLower(strings.TrimSpace(name))
+	name = strings.TrimSuffix(name, ".exe")
+
+	if shown, ok := windowsEditors[name]; ok {
+		return shown, true
 	}
+	if shown, ok := editors[name]; ok {
+		return shown, true
+	}
+	return "", false
 }
 
-const darwinScript = `
-tell application "System Events"
-	set frontApp to name of first application process whose frontmost is true
-	set windowTitle to ""
-	try
-		tell process frontApp
-			set windowTitle to name of front window
-		end try
-	end try
-	return frontApp & "\n" & windowTitle
-end tell`
-
-func focusedWindowDarwin() (string, string, error) {
-	out, err := exec.Command("osascript", "-e", darwinScript).Output()
-	if err != nil {
-		return "", "", err
-	}
-	lines := strings.SplitN(strings.TrimSpace(string(out)), "\n", 2)
-	if len(lines) == 1 {
-		return strings.TrimSpace(lines[0]), "", nil
-	}
-	return strings.TrimSpace(lines[0]), strings.TrimSpace(lines[1]), nil
-}
-
-func focusedWindowLinux() (string, string, error) {
-	id, err := exec.Command("xdotool", "getactivewindow").Output()
-	if err != nil {
-		return "", "", err
-	}
-	window := strings.TrimSpace(string(id))
-
-	class, err := exec.Command("xdotool", "getwindowclassname", window).Output()
-	if err != nil {
-		return "", "", err
-	}
-	name, err := exec.Command("xdotool", "getwindowname", window).Output()
-	if err != nil {
-		return "", "", err
-	}
-	return strings.TrimSpace(string(class)), strings.TrimSpace(string(name)), nil
+// windowsEditors maps executable names, which rarely match the name on the
+// window: JetBrains ships idea64.exe, Android Studio ships studio64.exe, and
+// Visual Studio — a different program from VS Code — is devenv.exe.
+var windowsEditors = map[string]string{
+	"zed":             "Zed",
+	"code":            "VS Code",
+	"code - insiders": "VS Code",
+	"cursor":          "Cursor",
+	"windsurf":        "Windsurf",
+	"antigravity":     "Antigravity",
+	"devenv":          "Visual Studio",
+	"rider64":         "Rider",
+	"idea64":          "IntelliJ",
+	"pycharm64":       "PyCharm",
+	"goland64":        "GoLand",
+	"webstorm64":      "WebStorm",
+	"clion64":         "CLion",
+	"studio64":        "Android Studio",
+	"sublime_text":    "Sublime Text",
+	"neovide":         "Neovim",
+	"nvim-qt":         "Neovim",
+	"notepad++":       "Notepad++",
+	"rustrover64":     "RustRover",
+	"phpstorm64":      "PhpStorm",
 }
