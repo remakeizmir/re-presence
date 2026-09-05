@@ -35,13 +35,28 @@ jobs:
       - run: npm run compile
       - run: npx @vscode/vsce package --no-dependencies --allow-missing-repository -o re-presence.vsix
 
+      # Both registries refuse a version they already hold, which is the right
+      # answer to a re-run and the wrong reason for a red pipeline. Anything
+      # else still fails.
       - name: VS Code Marketplace
         if: env.VSCE_PAT != ''
-        run: npx @vscode/vsce publish --packagePath re-presence.vsix
+        run: |
+          cikti=$(npx @vscode/vsce publish --packagePath re-presence.vsix 2>&1) || {
+            echo "$cikti"
+            echo "$cikti" | grep -qi "already exists" || exit 1
+            echo "Bu sürüm Marketplace'te zaten var — atlanıyor."
+          }
+          echo "$cikti"
 
       - name: Open VSX
         if: env.OVSX_PAT != ''
-        run: npx ovsx publish re-presence.vsix -p "$OVSX_PAT"
+        run: |
+          cikti=$(npx ovsx publish re-presence.vsix -p "$OVSX_PAT" 2>&1) || {
+            echo "$cikti"
+            echo "$cikti" | grep -qi "already published" || exit 1
+            echo "Bu sürüm Open VSX'te zaten var — atlanıyor."
+          }
+          echo "$cikti"
 
       - uses: softprops/action-gh-release@v2
         with:
