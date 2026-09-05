@@ -39,11 +39,6 @@ import (
 
 const (
 	reportEvery = 30 * time.Second
-	// idleAfter is how long the editor may be out of focus before the card
-	// comes down. Ten minutes: reading documentation, answering a message, and
-	// looking at your own hub profile are all part of working — and the last
-	// of those is guaranteed to happen the first time anyone installs this.
-	idleAfter = 10 * time.Minute
 )
 
 // editors maps the application name the window manager reports to the name
@@ -133,15 +128,17 @@ func main() {
 	var (
 		last         report
 		haveLast     bool
-		lastSeen     time.Time
 		lastSentIdle bool
 	)
 
+	// The card follows the editor being open, not the editor being in front.
+	// Discord works this way and it is the behaviour people expect: you are
+	// working on something for as long as it is open, whether or not you are
+	// looking at that window this second. It comes down when you close the
+	// editor.
 	tick := func() {
-		window, ok := focusedEditor()
-		if ok {
+		if window, ok := focusedEditor(); ok {
 			last, haveLast = window, true
-			lastSeen = time.Now()
 			lastSentIdle = false
 			if err := send(cfg, window); err != nil {
 				log.Printf("[re:presence] gönderilemedi: %v", err)
@@ -149,20 +146,34 @@ func main() {
 			return
 		}
 
-		// Out of the editor, but not for long: keep saying the same thing.
-		//
-		// The hub forgets a report after two minutes, and the first thing
-		// anyone does after installing this is switch to a browser to look at
-		// their own profile — which is exactly when the card would vanish.
-		// Working is not only the minutes with the editor in front.
-		if haveLast && time.Since(lastSeen) < idleAfter {
+		running := runningEditors()
+
+		// Still open, just not in front: keep saying the same thing, including
+		// the file it was last on — that is what the card said a moment ago
+		// and nothing has happened to make it untrue.
+		if haveLast && running[last.App] {
 			if err := send(cfg, last); err != nil {
 				log.Printf("[re:presence] gönderilemedi: %v", err)
 			}
 			return
 		}
 
-		if !lastSentIdle && haveLast {
+		// Open but never focused since this started — the agent was installed
+		// while the editor was already running. The app alone is worth saying.
+		if !haveLast {
+			for app := range running {
+				last = report{App: app}
+				haveLast = true
+				lastSentIdle = false
+				if err := send(cfg, last); err != nil {
+					log.Printf("[re:presence] gönderilemedi: %v", err)
+				}
+				return
+			}
+		}
+
+		// The editor is gone.
+		if haveLast && !lastSentIdle {
 			lastSentIdle = true
 			haveLast = false
 			if err := send(cfg, report{App: last.App, Idle: true}); err != nil {
@@ -560,6 +571,25 @@ func languageOf(file string) string {
 	default:
 		return ""
 	}
+}
+
+// editorsAmong picks the editors out of a list of process names.
+func editorsAmong(names []string) map[string]bool {
+	found := map[string]bool{}
+	for _, name := range names {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			continue
+		}
+		// ps prints paths for some entries; the last segment is the program.
+		if i := strings.LastIndexAny(name, "/\\"); i >= 0 {
+			name = name[i+1:]
+		}
+		if shown, ok := editorFromProcess(name); ok {
+			found[shown] = true
+		}
+	}
+	return found
 }
 
 // editorFromProcess turns what the operating system calls the running program

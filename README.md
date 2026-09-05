@@ -1,86 +1,117 @@
 # re:presence
 
-What you have open in your editor, on your hub profile card — the way a song
-is. A project, a file, and how long it has been going.
+Editöründe ne üzerinde çalıştığın, re:make profilinde görünür. Hangi proje,
+hangi dosya, kaçıncı satır ve ne zamandır.
 
-There are two ways in, because editors differ in what they will let a plugin do:
+<!-- Bir topluluk aracının README'si iki soruya cevap vermeli: bu ne, ve nasıl
+     kurarım. Üçüncü bir soru varsa — "kim yapıyor bunu" — cevabı üstte olmalı,
+     altta değil. -->
 
-| | What it is | Works with |
-|---|---|---|
-| **`vscode/`** | A VS Code extension | VS Code, Cursor, Windsurf, Antigravity — anything built on VS Code |
-| **`agent/`** | A small background program that reads the focused window's title | **Zed**, Xcode, Sublime, JetBrains, Visual Studio — anything else |
+## re:make
 
-Systems the agent runs on: **macOS**, **Windows**, and **Linux under X11**.
-Wayland is the exception — no compositor there hands the focused window's
-title to an unprivileged process, which is the whole mechanism.
+İzmir'de başlayan bağımsız bir geliştirici topluluğu. Beraber tasarlıyor,
+geliştiriyor ve yeniden yapıyoruz. İzmir bizim için bir pilot bölge; işleyeni
+başka şehirlere de taşımak niyetindeyiz.
 
-The agent exists because most editors have no way for a plugin to run in the
-background and speak HTTP. Zed's extensions are WebAssembly with no network or
-timers; Xcode has no extension API for this at all. Reading the window title is
-what is left, and it is enough for the project and the file.
+Topluluk kendi platformunda buluşuyor: [remakeizmir.com](https://remakeizmir.com).
+Orada sohbet odaları, projeler, etkinlikler ve herkesin bir profili var.
 
-Both send the same request, so a third way is easy to add: see `API.md`.
+## Bu ne işe yarıyor
+
+Bir odada kimin ne yaptığını görmek, o odayı yaşayan bir yer yapıyor. Birinin
+kartında "server üzerinde çalışıyor, 2 saattir" yazması, ona ne zaman soru
+sorulacağını — ya da ne zaman rahat bırakılacağını — söylüyor.
+
+Gönderilen şey: editörün adı, klasörün **adı**, dosyanın **adı**, satır numarası
+ve hata ayıklama oturumu olup olmadığı.
+
+Gönderilmeyen şey: **yol**. `/Users/can/is/gizli-musteri/src/main.go` yalnızca
+`main.go` olarak gider, proje adı da `gizli-musteri` olur. Sunucu ne gönderirsen
+gönder son parçaya indirir.
+
+Saklanan şey: **hiçbir şey**. Son bildirim iki dakika bellekte durur, sonra
+unutulur. Dün ne yaptığını soracak bir yer yok.
+
+Kart, editörün **açık olduğu sürece** durur — Discord'daki gibi, o pencereye
+bakıyor olman gerekmiyor. Editörü kapatınca iner.
 
 ## Kurulum
 
-**VS Code, Cursor, Windsurf, Antigravity:** eklentiyi kur, çıkan bildirimde
-*Bağlan*'a bas. Tarayıcı kodu hazır gelmiş sayfada açılır, tek düğmeye basarsın.
+Önce bir kez: hub → **Ayarlar** → **Bağlantılar** → **Kod editörü**. Aşağıdaki
+adımlar sana altı haneli bir kod gösterecek, onu orada onaylayacaksın. Kopyalanıp
+yapıştırılan uzun bir anahtar yok.
 
-Nereden kurulur:
+### VS Code · Cursor · Windsurf · Antigravity
 
-| Editör | Yer |
+Eklentiyi kur, çıkan bildirimde **Bağlan**'a bas. Tarayıcı kodu hazır gelmiş
+sayfada açılır, tek düğmeye basarsın.
+
+| Editör | Nereden |
 |---|---|
 | VS Code | [Marketplace](https://marketplace.visualstudio.com/items?itemName=remake.re-presence) |
-| Cursor, Windsurf, Antigravity, VSCodium | [Open VSX](https://open-vsx.org/extension/remake/re-presence) — bu editörler Microsoft'un mağazasını kullanamıyor |
-| Hepsi (mağazasız) | [remakeizmir.com/re-presence.vsix](https://remakeizmir.com/re-presence.vsix) → Eklentiler → ⋯ → VSIX'ten Yükle |
+| Cursor, Windsurf, Antigravity, VSCodium | [Open VSX](https://open-vsx.org/extension/remake/re-presence) |
+| Hepsi | [.vsix indir](https://remakeizmir.com/re-presence.vsix) → Eklentiler → ⋯ → VSIX'ten Yükle |
 
-> **Yayınlamadan önce:** iki mağaza da hesap istiyor ve bunları bir insanın
-> açması gerekiyor.
->
-> - **VS Code Marketplace:** Azure DevOps hesabı → publisher `remake` →
->   Personal Access Token (Marketplace: Manage yetkisi) → GitHub'da
->   `VSCE_PAT` secret'ı.
-> - **Open VSX:** open-vsx.org'a GitHub ile giriş → Eclipse Publisher Agreement
->   → access token → `OVSX_PAT` secret'ı.
->
-> İkisi de ücretsiz. Secret'lar konduktan sonra `ext-v0.1.0` gibi bir etiket
-> atmak yetiyor: `.github/workflows/extension.yml` paketleyip ikisine de
-> yolluyor, ayrıca .vsix'i release'e ekliyor. Secret yoksa yalnız .vsix üretilir
-> — indirme bağlantısı yine çalışır.
+Eklenti daha fazlasını bilir: satır numarası, dosyanın dili, hata ayıklama
+oturumu. Ayrıca `remake.privateProjects` ayarına yazdığın klasörlerde dosya adı
+göndermez, kartta yalnızca "gizli bir proje" yazar.
 
-**Zed, Xcode, JetBrains, diğerleri:** tek satır —
+### Zed · Xcode · JetBrains · Sublime · diğerleri
+
+Bu editörler bir eklentinin arka planda ağ kullanmasına izin vermiyor — Zed'in
+eklentileri WebAssembly, Xcode'da böyle bir API hiç yok. Onların yerine küçük
+bir program çalışıyor: odaktaki pencerenin başlığını okur, o kadar. Klavye
+dinlemez, dosya izlemez.
 
 ```sh
-# macOS ve Linux
+# macOS · Linux
 curl -fsSL https://remakeizmir.com/presence.sh | bash
 ```
 
 ```powershell
-# Windows (PowerShell, yönetici gerekmez)
+# Windows — PowerShell, yönetici olarak açmana gerek yok
 irm https://remakeizmir.com/presence.ps1 | iex
 ```
 
-İndirir, altı haneli kodu gösterir, açılışta çalışacak şekilde kurar. Kaldırmak
-için `~/.local/share/re-presence/uninstall.sh`.
+İndirir, kodu gösterir, bilgisayar her açıldığında kendi başlar.
 
-Kimse uzun bir anahtarı kopyalamıyor: anahtar sunucudan doğrudan editöre
-gidiyor, ekranda yalnız altı karakter görünüyor. Kod on dakika geçerli ve tek
-kullanımlık. Elle anahtar oluşturma seçeneği duruyor — kendi aracını yazanlar
-için.
+Tanıdığı editörler: Zed, Antigravity, VS Code, Cursor, Windsurf, Xcode, Sublime
+Text, Neovide, GoLand, WebStorm, IntelliJ, PyCharm, Android Studio, Rider, CLion,
+RustRover, PhpStorm, Visual Studio, Emacs, Nova. Odakta başka bir şey varken
+hiçbir şey göndermez.
 
-> `install.sh` hem burada hem `landing/public/presence.sh` içinde duruyor;
-> değiştirince `./sync-landing.sh` çalıştır.
+Linux'ta X11 ve `xdotool` gerekiyor. Wayland'da pencere başlığı okunamıyor —
+orada VS Code eklentisi tek yol.
 
-## What is sent, and what is kept
+## Kaldırmak
 
-Sent: the editor's name, the **folder name** of the project, the **file name**,
-the line number, the language, and whether you are debugging. Never the path —
-`/Users/can/is/gizli-musteri/src/main.go` is sent as `main.go` in
-`gizli-musteri`.
+Tamamen silmeden de durdurabilirsin: hub → Ayarlar → Bağlantılar → **Gizle**.
+Ya da o cihazın anahtarını sil, o makine anında susar.
 
-Kept: nothing. The hub holds the last report in memory for two minutes and then
-forgets it. There is no history, and no way to ask what someone was doing
-yesterday.
+```sh
+# macOS · Linux
+~/.local/share/re-presence/uninstall.sh
+```
 
-Turn it off any time from the same settings panel — the switch stops the hub
-showing it, without uninstalling anything.
+```powershell
+# Windows
+& "$env:LOCALAPPDATA\re-presence\uninstall.ps1"
+```
+
+Eklenti için: durum çubuğundaki **re:make**'e tıkla, kapanır. Kaldırmak
+istersen editörün eklenti listesinden.
+
+## Kendi editörün
+
+Tek bir POST isteği — [API.md](API.md). Hub'daki ayarlar sayfasından elle bir
+anahtar oluşturup yirmi satırla kendi entegrasyonunu yazabilirsin.
+
+## Depo
+
+```
+agent/    Zed ve diğerleri için küçük program (Go, bağımlılıksız)
+vscode/   VS Code ailesi için eklenti (TypeScript)
+API.md    Kendi aracını yazmak isteyenler için
+```
+
+MIT.

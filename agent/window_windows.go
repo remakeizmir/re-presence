@@ -27,6 +27,9 @@ var (
 	procGetWindowThreadProcessID = user32.NewProc("GetWindowThreadProcessId")
 
 	procOpenProcess               = kernel32.NewProc("OpenProcess")
+	procCreateToolhelp32Snapshot  = kernel32.NewProc("CreateToolhelp32Snapshot")
+	procProcess32FirstW           = kernel32.NewProc("Process32FirstW")
+	procProcess32NextW            = kernel32.NewProc("Process32NextW")
 	procCloseHandle               = kernel32.NewProc("CloseHandle")
 	procQueryFullProcessImageName = kernel32.NewProc("QueryFullProcessImageNameW")
 )
@@ -91,4 +94,45 @@ func processName(pid uint32) string {
 		}
 	}
 	return full
+}
+
+// runningEditors walks the process list. The same question the other systems
+// answer with a shell command, asked here through the API that avoids
+// spawning tasklist on every tick.
+func runningEditors() map[string]bool {
+	const th32csSnapProcess = 0x00000002
+	const maxPathShort = 260
+
+	snapshot, _, _ := procCreateToolhelp32Snapshot.Call(th32csSnapProcess, 0)
+	if snapshot == 0 || snapshot == ^uintptr(0) {
+		return nil
+	}
+	defer procCloseHandle.Call(snapshot)
+
+	type processEntry struct {
+		Size              uint32
+		Usage             uint32
+		ProcessID         uint32
+		DefaultHeapID     uintptr
+		ModuleID          uint32
+		Threads           uint32
+		ParentProcessID   uint32
+		PriorityClassBase int32
+		Flags             uint32
+		ExeFile           [maxPathShort]uint16
+	}
+
+	var entry processEntry
+	entry.Size = uint32(unsafe.Sizeof(entry))
+
+	found := map[string]bool{}
+	ret, _, _ := procProcess32FirstW.Call(snapshot, uintptr(unsafe.Pointer(&entry)))
+	for ret != 0 {
+		name := syscall.UTF16ToString(entry.ExeFile[:])
+		if shown, ok := editorFromProcess(name); ok {
+			found[shown] = true
+		}
+		ret, _, _ = procProcess32NextW.Call(snapshot, uintptr(unsafe.Pointer(&entry)))
+	}
+	return found
 }

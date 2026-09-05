@@ -81,3 +81,26 @@ func TestEditorFromProcessIgnoresEverythingElse(t *testing.T) {
 		}
 	}
 }
+
+// The card follows the editor being open rather than being in front, so the
+// process list has to be read the same way on every system: names, sometimes
+// paths, sometimes with an .exe on the end.
+func TestEditorsAmong(t *testing.T) {
+	found := editorsAmong([]string{
+		"Finder", "stable", "OrbStack", "Dia", // Warp calls itself "stable"
+		"zed",
+		"/usr/share/code/code",
+		"Code.exe",
+		"  ",
+		"chrome",
+	})
+
+	for _, want := range []string{"Zed", "VS Code"} {
+		if !found[want] {
+			t.Errorf("%s bulunamadı: %v", want, found)
+		}
+	}
+	if len(found) != 2 {
+		t.Errorf("fazladan bir şey editör sayıldı: %v", found)
+	}
+}

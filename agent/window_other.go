@@ -9,3 +9,5 @@ import "fmt"
 func focusedWindow() (app, title string, err error) {
 	return "", "", fmt.Errorf("bu işletim sisteminde pencere başlığı okunamıyor")
 }
+
+func runningEditors() map[string]bool { return nil }

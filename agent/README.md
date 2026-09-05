@@ -8,53 +8,29 @@ It asks for no accessibility permission, reads no keystrokes and watches no
 files. On macOS the first run may raise a one-time "allow Terminal to control
 System Events" prompt — that is what reads the window title.
 
-## Setup
+## Kurulum
+
+Kullanıcıysan: [üstteki README](../README.md). Tek satır.
+
+Geliştiriyorsan:
 
 ```sh
 go build -o re-presence .
-mkdir -p ~/.config/re-presence
-cat > ~/.config/re-presence/config.json <<'JSON'
-{
-  "token": "rmk_dev_…",
-  "api": "https://api.remakeizmir.com/api/v1"
-}
-JSON
-
-./re-presence -once   # tek seferlik dene
-./re-presence         # sürekli çalıştır
+./re-presence -pair    # bir kez bağla
+./re-presence          # çalıştır
+./re-presence -once    # tek bildirim gönder, çık — hata ayıklamak için
 ```
 
-`RE_PRESENCE_TOKEN` and `RE_PRESENCE_API` override the file, which is what the
-launch agent below uses.
+`RE_PRESENCE_TOKEN` ve `RE_PRESENCE_API` ortam değişkenleri
+`~/.config/re-presence/config.json` dosyasını ezer.
 
-## Start it with the machine (macOS)
+## Nasıl çalışıyor
 
-`~/Library/LaunchAgents/com.remakeizmir.presence.plist`:
+Odaktaki pencerenin başlığını otuz saniyede bir okur. Editör açık ama odakta
+değilse son bildirimi tekrarlar; editör kapanınca kartı indirir. Erişilebilirlik
+izni istemez, tuş vuruşu okumaz, dosya izlemez.
 
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
-  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>Label</key><string>com.remakeizmir.presence</string>
-  <key>ProgramArguments</key>
-  <array><string>/Users/KULLANICI/bin/re-presence</string></array>
-  <key>RunAtLoad</key><true/>
-  <key>KeepAlive</key><true/>
-</dict>
-</plist>
-```
-
-```sh
-launchctl load ~/Library/LaunchAgents/com.remakeizmir.presence.plist
-```
-
-## Linux
-
-Needs `xdotool` (X11). Wayland is not supported: no compositor there hands out
-the focused window's title to an unprivileged process, which is the whole
-mechanism.
+macOS'ta AppleScript, Linux'ta `xdotool` (X11), Windows'ta Win32.
 
 ## Which editors it recognises
 

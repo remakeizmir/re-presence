@@ -37,3 +37,19 @@ func focusedWindow() (string, string, error) {
 	}
 	return strings.TrimSpace(lines[0]), strings.TrimSpace(lines[1]), nil
 }
+
+const darwinListScript = `
+tell application "System Events"
+	return name of every application process whose background only is false
+end tell`
+
+// runningEditors is every editor with a window open, focused or not — the
+// question Discord answers with "in VS Code" whether or not you are looking
+// at that window this second.
+func runningEditors() map[string]bool {
+	out, err := exec.Command("osascript", "-e", darwinListScript).Output()
+	if err != nil {
+		return nil
+	}
+	return editorsAmong(strings.Split(string(out), ","))
+}
